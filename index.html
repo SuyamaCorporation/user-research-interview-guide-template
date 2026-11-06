@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ユーザーリサーチインタビューガイドテンプレ</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+<div class="max-w-2xl mx-auto px-4 py-6">
+  <h1 class="text-2xl font-bold text-center text-teal-400 mb-1">🎙 インタビューガイド生成</h1>
+  <p class="text-center text-gray-400 text-sm mb-6">構造化インタビューガイドをMarkdownで生成</p>
+
+  <!-- Setup -->
+  <div class="bg-gray-800 rounded-xl p-4 mb-4">
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs text-gray-400 mb-1" for="project-name">プロジェクト名</label>
+        <input type="text" id="project-name" placeholder="例: オンライン学習サービス UX改善" oninput="saveState()"
+          class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
+          aria-label="プロジェクト名">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1" for="purpose">インタビュー目的</label>
+        <textarea id="purpose" rows="2" placeholder="例: 新機能の有用性とUIの使いやすさを検証する" oninput="saveState()"
+          class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-400 resize-none"
+          aria-label="インタビュー目的"></textarea>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-2">インタビュー形式</label>
+        <div class="flex gap-4 flex-wrap">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="format" value="jtbd" checked onchange="onFormatChange()" class="accent-teal-400" aria-label="JTBD形式">
+            <span class="text-sm">📋 JTBD</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="format" value="usability" onchange="onFormatChange()" class="accent-teal-400" aria-label="ユーザビリティ">
+            <span class="text-sm">🖱 ユーザビリティ</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="format" value="exploratory" onchange="onFormatChange()" class="accent-teal-400" aria-label="探索的">
+            <span class="text-sm">🔍 探索的</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Hypotheses -->
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">仮説（最大3つ）</label>
+        <div class="space-y-2" id="hypotheses-container">
+          <input type="text" placeholder="仮説1: 例) ユーザーは機能Xを使いこなせていない" oninput="saveState()"
+            class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
+            aria-label="仮説1">
+          <input type="text" placeholder="仮説2" oninput="saveState()"
+            class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
+            aria-label="仮説2">
+          <input type="text" placeholder="仮説3" oninput="saveState()"
+            class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
+            aria-label="仮説3">
+        </div>
+      </div>
+    </div>
+    <button onclick="generateGuide()" class="mt-4 w-full py-2 bg-teal-600 hover:bg-teal-500 rounded-lg text-sm font-semibold" aria-label="ガイド生成">📝 ガイドを生成</button>
+  </div>
+
+  <!-- Questions Editor -->
+  <div id="questions-section" class="hidden">
+    <div class="bg-gray-800 rounded-xl p-4 mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-semibold text-gray-300">質問リスト（編集可能）</h2>
+        <button onclick="addQuestion()" class="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded text-xs" aria-label="質問追加">＋ 質問追加</button>
+      </div>
+      <div id="questions-list" class="space-y-2 mb-3"></div>
+    </div>
+
+    <!-- Output -->
+    <div class="bg-gray-800 rounded-xl p-4 mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-semibold text-gray-300">生成Markdownガイド</h2>
+        <button onclick="copyGuide()" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs" aria-label="コピー">📋 コピー</button>
+      </div>
+      <textarea id="guide-output" rows="12" readonly
+        class="w-full bg-gray-950 border border-gray-700 rounded p-3 text-xs text-teal-300 font-mono resize-none"
+        aria-label="生成されたMarkdownガイド"></textarea>
+      <span id="copy-msg" class="hidden text-xs text-green-400">コピーしました！</span>
+    </div>
+
+    <!-- Session Notes -->
+    <div class="bg-gray-800 rounded-xl p-4 mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-semibold text-gray-300">🗒 セッションメモ</h2>
+        <button onclick="addNote()" class="px-3 py-1 bg-teal-700 hover:bg-teal-600 rounded text-xs" aria-label="メモ追加">＋ メモ追加</button>
+      </div>
+      <div id="notes-list" class="space-y-2"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const TEMPLATES = {
+  jtbd: {
+    warmup: ['まずは自己紹介をお願いできますか？','普段どのようなツールやサービスをよく使いますか？','今日はどんな気分でいらっしゃいますか？'],
+    core: [
+      '最後に{製品カテゴリ}を使ったのはいつですか？その時何をしようとしていましたか？',
+      '"{製品カテゴリ}を使う"という状況に至るまで、どんな経緯がありましたか？',
+      'その作業を完了したとき、どのような気持ちになりましたか？',
+      '理想的には、その作業がどのように進むといいと思いますか？',
+      '今の方法で不満に感じていることはありますか？',
+    ],
+    followup: ['もう少し詳しく教えていただけますか？','その時どんな気持ちでしたか？','他に何か気になることはありましたか？','そのような状況はよく起きますか？'],
+  },
+  usability: {
+    warmup: ['普段どんなデバイスをメインに使っていますか？','このサービスを最後に使ったのはいつですか？','ITツールには慣れているほうですか？'],
+    core: [
+      'これからこの画面を使ってみてください。考えていることを声に出しながら操作してください（思考発話法）',
+      'この機能を初めて見たとき、何をするものだと思いましたか？',
+      'どのボタンや要素に最初に気がつきましたか？',
+      'この操作で困ったことや迷ったことはありましたか？',
+      '全体的な使いやすさを1-10で評価すると？その理由は？',
+    ],
+    followup: ['そこで止まったのはなぜですか？','期待した動作と違いましたか？','これはどこにあると思いますか？','何を探していましたか？'],
+  },
+  exploratory: {
+    warmup: ['最近{テーマ}について考えることはありましたか？','あなたの日常的なルーティンを教えていただけますか？','今の仕事や生活で一番時間を取られることは何ですか？'],
+    core: [
+      '{テーマ}に関して、今どんな方法で対処していますか？',
+      'その方法を始めたきっかけは何でしたか？',
+      '理想的には、{テーマ}についてどんな解決策があればいいと思いますか？',
+      '現在使っているツールやサービスで、特に気に入っている点は？',
+      '逆に、改善してほしいと思う点は？',
+    ],
+    followup: ['それはなぜ大切なのですか？','具体的なエピソードを教えてください','同じことを経験した人を知っていますか？','もし魔法の杖があったら、何を変えますか？'],
+  },
+};
+
+let currentQuestions = [];
+let notes = JSON.parse(localStorage.getItem('interview-notes') || '[]');
+
+function getFormat() {
+  return document.querySelector('input[name="format"]:checked')?.value || 'jtbd';
+}
+
+function onFormatChange() {
+  generateGuide();
+}
+
+function generateGuide() {
+  const fmt = getFormat();
+  const tmpl = TEMPLATES[fmt];
+  currentQuestions = [
+    ...tmpl.warmup.map(q => ({type:'warmup', text:q})),
+    ...tmpl.core.map(q => ({type:'core', text:q})),
+    ...tmpl.followup.map(q => ({type:'followup', text:q})),
+  ];
+  document.getElementById('questions-section').classList.remove('hidden');
+  renderQuestions();
+  buildOutput();
+  saveState();
+}
+
+function renderQuestions() {
+  const container = document.getElementById('questions-list');
+  while (container.firstChild) container.removeChild(container.firstChild);
+  const sections = [
+    {type:'warmup', label:'🤝 ウォームアップ', color:'text-blue-400'},
+    {type:'core', label:'🎯 コア質問', color:'text-teal-400'},
+    {type:'followup', label:'🔍 フォローアップ', color:'text-purple-400'},
+    {type:'custom', label:'✏️ カスタム', color:'text-orange-400'},
+  ];
+  sections.forEach(sec => {
+    const qs = currentQuestions.filter(q => q.type === sec.type);
+    if (qs.length === 0) return;
+    const header = document.createElement('div');
+    header.className = 'text-xs font-semibold mt-3 mb-1 ' + sec.color;
+    header.textContent = sec.label;
+    container.appendChild(header);
+    qs.forEach((q, qi) => {
+      const globalIdx = currentQuestions.indexOf(q);
+      const div = document.createElement('div');
+      div.className = 'flex items-start gap-2';
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.value = q.text;
+      inp.className = 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-teal-400';
+      inp.setAttribute('aria-label', '質問テキスト');
+      inp.oninput = () => { currentQuestions[globalIdx].text = inp.value; buildOutput(); };
+      const del = document.createElement('button');
+      del.className = 'text-red-400 hover:text-red-300 text-xs mt-2';
+      del.textContent = '✕';
+      del.setAttribute('aria-label', '質問削除');
+      del.onclick = () => { currentQuestions.splice(globalIdx, 1); renderQuestions(); buildOutput(); };
+      div.appendChild(inp);
+      div.appendChild(del);
+      container.appendChild(div);
+    });
+  });
+}
+
+function addQuestion() {
+  currentQuestions.push({type:'custom', text:''});
+  renderQuestions();
+  buildOutput();
+}
+
+function buildOutput() {
+  const project = document.getElementById('project-name').value || 'プロジェクト名未設定';
+  const purpose = document.getElementById('purpose').value || '';
+  const fmt = getFormat();
+  const fmtLabel = {jtbd:'JTBD', usability:'ユーザビリティ', exploratory:'探索的'}[fmt];
+  const hyps = Array.from(document.getElementById('hypotheses-container').querySelectorAll('input'))
+    .map(inp => inp.value.trim()).filter(Boolean);
+
+  const intro = `こちらのインタビューにご参加いただき、ありがとうございます。今日は「${project}」についてお話をお聞きしたいと思います。所要時間は約60分です。いただいたご意見は製品改善にのみ使用し、個人を特定する情報は含めません。録音の許可をいただいてもよいでしょうか？`;
+
+  let md = `# インタビューガイド: ${project}\n\n`;
+  md += `**インタビュー形式**: ${fmtLabel}\n`;
+  md += `**目的**: ${purpose}\n\n`;
+  if (hyps.length > 0) {
+    md += `## 仮説\n\n`;
+    hyps.forEach((h, i) => { md += `${i+1}. ${h}\n`; });
+    md += '\n';
+  }
+  md += `## 開始の口上\n\n${intro}\n\n`;
+
+  const sections = [
+    {type:'warmup', label:'ウォームアップ（5分）'},
+    {type:'core', label:'コア質問（40分）'},
+    {type:'followup', label:'フォローアッププローブ'},
+    {type:'custom', label:'カスタム質問'},
+  ];
+  sections.forEach(sec => {
+    const qs = currentQuestions.filter(q => q.type === sec.type);
+    if (qs.length === 0) return;
+    md += `## ${sec.label}\n\n`;
+    qs.forEach((q, i) => { md += `${i+1}. ${q.text}\n`; });
+    md += '\n';
+  });
+  md += `## ラップアップ\n\n1. 他にお伝えしたいことはありますか？\n2. 今日の体験で何か印象に残ったことはありますか？\n3. 次のステップをご説明します。ご協力ありがとうございました。\n`;
+
+  document.getElementById('guide-output').value = md;
+}
+
+function copyGuide() {
+  const text = document.getElementById('guide-output').value;
+  navigator.clipboard.writeText(text).then(() => {
+    const msg = document.getElementById('copy-msg');
+    msg.classList.remove('hidden');
+    setTimeout(() => msg.classList.add('hidden'), 2000);
+  });
+}
+
+function addNote() {
+  const now = new Date();
+  const ts = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  notes.push({time: ts, text: ''});
+  localStorage.setItem('interview-notes', JSON.stringify(notes));
+  renderNotes();
+}
+
+function renderNotes() {
+  const container = document.getElementById('notes-list');
+  while (container.firstChild) container.removeChild(container.firstChild);
+  if (notes.length === 0) {
+    const p = document.createElement('p');
+    p.className = 'text-xs text-gray-500';
+    p.textContent = '「＋ メモ追加」でタイムスタンプ付きメモを追加';
+    container.appendChild(p);
+    return;
+  }
+  notes.forEach((note, i) => {
+    const div = document.createElement('div');
+    div.className = 'flex items-start gap-2';
+    const ts = document.createElement('span');
+    ts.className = 'text-xs text-teal-400 mt-2 w-10 shrink-0';
+    ts.textContent = note.time;
+    const inp = document.createElement('textarea');
+    inp.rows = 2;
+    inp.value = note.text;
+    inp.placeholder = 'メモを入力...';
+    inp.className = 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-teal-400 resize-none';
+    inp.setAttribute('aria-label', note.time + 'のメモ');
+    inp.oninput = () => { notes[i].text = inp.value; localStorage.setItem('interview-notes', JSON.stringify(notes)); };
+    const del = document.createElement('button');
+    del.className = 'text-red-400 hover:text-red-300 text-xs mt-2';
+    del.textContent = '✕';
+    del.setAttribute('aria-label', 'メモ削除');
+    del.onclick = () => { notes.splice(i, 1); localStorage.setItem('interview-notes', JSON.stringify(notes)); renderNotes(); };
+    div.appendChild(ts);
+    div.appendChild(inp);
+    div.appendChild(del);
+    container.appendChild(div);
+  });
+}
+
+function saveState() {
+  localStorage.setItem('interview-state', JSON.stringify({
+    project: document.getElementById('project-name').value,
+    purpose: document.getElementById('purpose').value,
+    format: getFormat(),
+    hyps: Array.from(document.getElementById('hypotheses-container').querySelectorAll('input')).map(i => i.value),
+  }));
+}
+
+// Restore state
+const saved = JSON.parse(localStorage.getItem('interview-state') || 'null');
+if (saved) {
+  document.getElementById('project-name').value = saved.project || '';
+  document.getElementById('purpose').value = saved.purpose || '';
+  if (saved.format) {
+    const r = document.querySelector('input[name="format"][value="' + saved.format + '"]');
+    if (r) r.checked = true;
+  }
+  if (saved.hyps) {
+    const inputs = document.getElementById('hypotheses-container').querySelectorAll('input');
+    saved.hyps.forEach((h, i) => { if (inputs[i]) inputs[i].value = h; });
+  }
+}
+renderNotes();
+</script>
+</body>
+</html>
